@@ -1,0 +1,63 @@
+---
+title: "Harmfulness of Weather Events"
+author: "Andres Glavina"
+date: "08/22/2015"
+output: html_document
+---
+
+## Synopsis
+
+  The goal of this report is to give an answer to two questions, based on the weather data events from the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+  The questions to addres are the following:
+
+- Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+- Across the United States, which types of events have the greatest economic consequences?
+
+  The storm data includes: 
+
+ - The occurrence of storms and other significant weather phenomena having
+sufficient intensity to cause loss of life, injuries, significant property damage, and/or disruption to commerce;
+
+ - Rare, unusual, weather phenomena that generate media attention, such as snow
+flurries in South Florida or the San Diego coastal area; and
+
+ - Other significant meteorological events, such as record maximum or minimum
+temperatures or precipitation that occur in connection with another event. 
+fine particulate matter air pollution (PM2.5) that is monitored across the U.S. as part of the nationwide PM monitoring network. We obtained the files for the years 1999 and 2012.
+
+  The events in the database start in the year 1950 and end in November 2011. In the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. More recent years should be considered more complete.
+
+## Data Processing 
+
+From the Coursera course we obtained <a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2" target="_blank">data</a> on storm data. 
+
+```{r load-data, cache=TRUE}
+require(dplyr,quietly=TRUE)
+require(lattice,quietly=TRUE)
+require(stringr,quietly=TRUE)
+#data.activity.raw <- read.csv(bzfile("repdata-data-StormData.csv.bz2"))
+data.activity.raw <- read.csv("repdata-data-StormData.csv")
+head(data.activity.raw)
+
+data.activity <- data.activity.raw[,c("interval","steps"),drop=FALSE]
+
+We clean the data of unwanted event types (Ex. summary). Also, we merge event types that are the same but with different names 
+
+junk <- grep("summary", events$EVTYPE, ignore.case = TRUE)
+filter(data.activity, !grepl("RTB",TrackingPixel)) 
+
+data.activity <- 
+```
+The number of missing values is: 
+```{r}
+nrow(data.activity[is.na(data.activity$steps),])
+```
+
+
+## Results
+
+Here goes the results
+
+
