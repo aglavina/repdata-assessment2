@@ -9,7 +9,7 @@ output: html_document
 
   The goal of this report is to give an answer to two questions, based on the weather data events from the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
 
-  The questions to addres are the following:
+  The questions to address are the following:
 
 - Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
 
@@ -33,29 +33,109 @@ fine particulate matter air pollution (PM2.5) that is monitored across the U.S. 
 
 From the Coursera course we obtained <a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2" target="_blank">data</a> on storm data. 
 
-```{r load-data, cache=TRUE}
+```{r}
 require(dplyr,quietly=TRUE)
 require(lattice,quietly=TRUE)
 require(stringr,quietly=TRUE)
+```
+
+```{r load-data, cache=TRUE}
 #data.activity.raw <- read.csv(bzfile("repdata-data-StormData.csv.bz2"))
-data.activity.raw <- read.csv("repdata-data-StormData.csv")
-head(data.activity.raw)
+events.raw <- read.csv("repdata-data-StormData.csv")
+events.raw<-select(events.raw,EVTYPE,BGN_DATE,END_DATE,FATALITIES,INJURIES,PROPDMG,PROPDMGEXP,CROPDMG,CROPDMGEXP)
+events.raw = events.raw[complete.cases(events.raw),]
+head(events.raw)
+nrow(events.raw)
 
-data.activity <- data.activity.raw[,c("interval","steps"),drop=FALSE]
-
-We clean the data of unwanted event types (Ex. summary). Also, we merge event types that are the same but with different names 
-
-junk <- grep("summary", events$EVTYPE, ignore.case = TRUE)
-filter(data.activity, !grepl("RTB",TrackingPixel)) 
-
-data.activity <- 
 ```
-The number of missing values is: 
+We clean the data of unwanted event types (Ex. summary). Also, we merge event types that are the same but with different names. We want to finish with only events that are included in the Storm Data Event Table (National Weather Service Storm Data Documentation 
+
+LINK
+
+
+)
+
+Some event types of our data may match with different events of our table guide. We resolved the conflicts giving precedence in importance to certain types. This precedence was based on the event type description included in the documentation mentioned above.
+
+Some other considerations:
+
+- Tornados take precedence over all the other events
+- Hurricanes and Typhoons take precedence over all except tornados
+- Mud slides are considered Flash Floods
+- Downbursts, including dry, or wet, microbursts or macrobursts, are
+classified as Thunderstorm Wind events.
+- Hail events take precedence over thunderstorms
+- High surf events take precedence over rain and rip currents.
+- Drough take precedence over heat
+- Flash Flood events take precedence over thunderstorm wind 
+- Floodings take precedence over heavy rain
+- Sleets take precedence over heavy snow and freezing rain
+
 ```{r}
-nrow(data.activity[is.na(data.activity$steps),])
+toMatch <- c("FALLING SNOW/ICE","ROAD","wet","RECORD TEMPERATURE" ,"DRY CONDITIONS" ,"RED FLAG","vog","mild","NON-SEVERE WIND DAMAGE","ROUGH SEAS","first","THUNDERSNOW","WET SNOW","SNOW SHOWERS","WIND AND WAVE","No Severe Weather","SNOW ADVISORY","summary", "none", "other","UNSEASONABLY DRY","drowning","Coastal Storm","CoastalStorm","NORTHERN LIGHTS","Light snow","Light snowfall","moderate snow","accumulated snowfall","mountain snows","monthly","drifting snow","late snow","late season snowfall","early")
+junk <- grep(paste(toMatch,collapse="|"), events.raw$EVTYPE, ignore.case = TRUE, invert = TRUE)
+events <- events.raw %>% filter(row_number() %in% junk)
+events <- events %>% filter(events$EVTYPE!="?")
+events <- events %>% filter(events$EVTYPE!="Snow")
+
+events$EVTYPE <-gsub("NON TSTM WIND", "strong wind", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("NON-TSTM WIND", "strong wind", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*tornado.*", "tornado", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*typhoon.*", "hurricane (typhoon)", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*hurricane.*", "hurricane (typhoon)", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*mud.*", "flash floods", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*ice storm.*", "flash floods", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*dust devel.*", "dust devil", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*dust devil.*", "dust devil", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*saharan.*", "dust storm", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*duststorm.*", "dust storm", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*dust storm.*", "dust storm", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*blowing dust.*", "dust storm", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*UNSEASONABLY HOT.*", "heat", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*UNSEASONABLY warm.*", "heat", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*UNSEASONABLY cool.*", "cold/wind chill", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*UNSEASONABLY cold.*", "cold/wind chill", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*burst.*", "thunderstorm wind", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*glaze.*", "freezing fog", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("marine hail.*", "marinehal", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*hail.*", "hail", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("marinehal", "marine hail", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*surf.*", "high surf", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("ROGUE WAVE", "high surf", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("HIGH WAVES", "high surf", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*drought.*", "drought", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*heat.*", "heat", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*warm.*", "heat", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*land.*", "debris flow", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*smoke.*", "dense smoke", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("volcanic.*", "volcanic ash", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*flash.*", "flash flud", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*surge.*", "storm surge/tide", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*cstl.*", "coastal flud", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*coastal.*", "coastal flud", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*squal.*", "heavy snow", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("RECORD LOW RAINFALL", "drought", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*dry.*", "drought", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*driest.*", "drought", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*sleet.*", "sleet", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*extreme.*", "extreme cold/wind chill", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("FOG AND COLD TEMPERATURES", "freezing fog", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("FOG", "dense fog", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*dense FOG.*", "dense fog", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*freezing FOG.*", "freezing fog", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*ice FOG.*", "freezing fog", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*effects.*", "heavy rain", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub(".*effect.*", "lake effect snow", events$EVTYPE,ignore.case = TRUE)
+
+
+
+
+events$EVTYPE <-gsub("tstm wind.*", "thunderstorm wind", events$EVTYPE,ignore.case = TRUE)
+events$EVTYPE <-gsub("tstm wind.*", "thunderstorm wind", events$EVTYPE,ignore.case = TRUE)
+
+#data.activity <- 
 ```
-
-
+events.raw.nrows()
 ## Results
 
 Here goes the results
